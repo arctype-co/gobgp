@@ -34,6 +34,7 @@ import (
 	apb "google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/emptypb"
 	tspb "google.golang.org/protobuf/types/known/timestamppb"
+	"github.com/google/uuid"
 
 	api "github.com/osrg/gobgp/v3/api"
 	"github.com/osrg/gobgp/v3/internal/pkg/table"
@@ -166,6 +167,12 @@ func newValidationFromTableStruct(v *table.Validation) *api.Validation {
 
 func toPathAPI(binNlri []byte, binPattrs [][]byte, anyNlri *apb.Any, anyPattrs []*apb.Any, path *table.Path, v *table.Validation) *api.Path {
 	nlri := path.GetNlri()
+	var uuidBytes []byte = nil
+
+	if path.Uuid != nil {
+		uuidBytes, _ = path.Uuid.MarshalBinary()
+	}
+
 	p := &api.Path{
 		Nlri:               anyNlri,
 		Pattrs:             anyPattrs,
@@ -181,6 +188,7 @@ func toPathAPI(binNlri []byte, binPattrs [][]byte, anyNlri *apb.Any, anyPattrs [
 		LocalIdentifier:    nlri.PathLocalIdentifier(),
 		NlriBinary:         binNlri,
 		PattrsBinary:       binPattrs,
+		Uuid:               uuidBytes,
 	}
 	if s := path.GetSource(); s != nil {
 		p.SourceAsn = s.AS
@@ -393,6 +401,17 @@ func api2Path(resource api.TableType, path *api.Path, isWithdraw bool) (*table.P
 		newPath.SetHash(farm.Hash32(total.Bytes()))
 	}
 	newPath.SetIsFromExternal(path.IsFromExternal)
+
+	if path.Uuid != nil {
+		uuid, err := uuid.FromBytes(path.Uuid)
+
+		if err != nil {
+			return nil, err
+		}
+
+		newPath.Uuid = &uuid
+	}
+
 	return newPath, nil
 }
 
