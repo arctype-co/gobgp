@@ -2129,7 +2129,14 @@ func (s *BgpServer) AddPath(ctx context.Context, r *api.AddPathRequest) (*api.Ad
 	}
 	var uuidBytes []byte
 	err := s.mgmtOperation(func() error {
-		id, err := uuid.NewRandom()
+		var id uuid.UUID
+		var err error
+
+		if r.Path.Uuid != nil && len(r.Path.Uuid) > 0 {
+			id, err = uuid.FromBytes(r.Path.Uuid)
+		} else {
+			id, err = uuid.NewRandom()
+		}
 
 		if err != nil {
 			return err
